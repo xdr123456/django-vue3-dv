@@ -14,6 +14,17 @@ from rest_framework.viewsets import GenericViewSet
 from rest_framework.decorators import permission_classes
 from loguru import logger
 from rest_framework.mixins import ListModelMixin,CreateModelMixin,UpdateModelMixin,DestroyModelMixin
+from dv_backend.utils.rsa_util import rsa_decrypt
+
+
+def decrypt_password(password: str) -> str:
+    if password and password.startswith('-----'):
+        return password
+    if password and len(password) > 100 and not password.startswith('pbkdf2_sha256$'):
+        decrypted = rsa_decrypt(password)
+        if decrypted != password:
+            return decrypted
+    return password
 
 
 # 统一返回格式
@@ -38,9 +49,17 @@ class UserViewSet(
     # 1. 【单独：查询列表】独立逻辑
     def list(self, request, *args, **kwargs):
         logger.info('===== 执行 查询列表 逻辑 =====')
-        logger.debug(f"查询列表参数：{request.data}")
+        logger.debug(f"查询列表参数：{request.query_params}")
 
         queryset = self.get_queryset()
+
+        username = request.query_params.get("username", "").strip()
+        nickname = request.query_params.get("nickname", "").strip()
+        if username:
+            queryset = queryset.filter(username__icontains=username)
+        if nickname:
+            queryset = queryset.filter(nickname__icontains=nickname)
+
         page_data = self.paginate_queryset(queryset)
         if page_data:
             ser = self.get_serializer(page_data, many=True)
@@ -55,11 +74,16 @@ class UserViewSet(
         logger.info('===== 执行 新增用户 逻辑 =====')
         logger.debug(f"新增用户参数：{request.data}")
 
-        ser = self.get_serializer(data=request.data)
+        data = request.data.copy()
+        password = data.get("password", "")
+        if password:
+            data["password"] = decrypt_password(password)
+
+        ser = self.get_serializer(data=data)
         if not ser.is_valid():
             return result_fail(f"参数校验失败：{ser.errors}")
         # 可在这里加新增前置校验
-        username = request.data.get("username")
+        username = data.get("username")
         if SysUser.objects.filter(username=username).exists():
             return result_fail("账号已存在，无法新增")
         
@@ -71,12 +95,18 @@ class UserViewSet(
         logger.info('===== 执行 编辑用户 逻辑 =====')
         logger.debug(f"编辑用户参数：{request.data}")
         instance = self.get_object()
-        ser = self.get_serializer(instance, data=request.data)
+
+        data = request.data.copy()
+        password = data.get("password", "")
+        if password:
+            data["password"] = decrypt_password(password)
+
+        ser = self.get_serializer(instance, data=data)
         if not ser.is_valid():
             return result_fail(f"修改参数错误：{ser.errors}")
         
         # 自定义修改业务判断
-        if instance.username == "admin" and request.data.get("username") != "admin":
+        if instance.username == "admin" and data.get("username") != "admin":
             return result_fail("管理员账号不允许修改账号名")
         
         self.perform_update(ser)
@@ -103,7 +133,9 @@ def login_view(request):
 
     if not username or not password:
         return Response({"code":400,"msg":"账号密码不能为空"}, status=status.HTTP_200_OK)
-    
+
+    password = decrypt_password(password)
+
     try:
         user = SysUser.objects.get(username=username)
 

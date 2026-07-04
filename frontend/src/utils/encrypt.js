@@ -1,0 +1,19 @@
+import JSEncrypt from 'jsencrypt'
+
+const publicKey = `-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsklpplwriUdvItzfLmI9
+v/8ds43b/TzZEzG7Ig0MGZ3M79WGBuh91uvsStJAypuirBjXhGPXkjDGJa3bkfKL
+yrUjdQE40D5UjJdGaFOygYlITy+7lWLNHVGohyGYq6V09LHPYM/A2FLCV4jSliC0
+Vtl5HgtiNujA0R9tCa0RFYYWUSJ7J9eDdQ9H5JArHf1izw+6Z6XXSiCNx+dA8cIH
+WlJWxXk5z6vHJE+2jffxTMDeJJny1JxK+fJyhl0bT7Oahf6H8qSe3A60mpF8ivh1
+Qq5sww/PnSZyOsVywfmKQfsz6ljjmARsk995NM3vLwd+Pc88gn125TXcI2FtIQ2l
+sQIDAQAB
+-----END PUBLIC KEY-----`
+
+export function rsaEncrypt(text) {
+  if (!text) return text
+  const encrypt = new JSEncrypt()
+  encrypt.setPublicKey(publicKey)
+  const encrypted = encrypt.encrypt(text)
+  return encrypted || text
+}

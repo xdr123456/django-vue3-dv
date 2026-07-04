@@ -21,6 +21,7 @@
 import { ref, getCurrentInstance } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { rsaEncrypt } from '../utils/encrypt'
 
 const { proxy } = getCurrentInstance()
 const router = useRouter()
@@ -30,7 +31,11 @@ const form = ref({
 })
 
 const doLogin = async () => {
-  const res = await proxy.$http.post('/login', form.value)
+  const params = {
+    username: form.value.username,
+    password: rsaEncrypt(form.value.password)
+  }
+  const res = await proxy.$http.post('/login', params)
   localStorage.setItem('token', res.data.access)
   localStorage.setItem('refreshToken', res.data.refresh)
   localStorage.setItem('userInfo', JSON.stringify(res.data.userInfo))

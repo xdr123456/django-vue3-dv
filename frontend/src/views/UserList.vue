@@ -1,7 +1,33 @@
 <template>
   <div style="padding:20px">
     <div style="display: flex; justify-content: space-between;">
-      <div>
+      <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
+        <el-input
+          v-model="searchUsername"
+          placeholder="搜索账号"
+          clearable
+          style="width: 180px"
+          @keyup.enter="handleSearch"
+          @clear="handleSearch"
+        >
+          <template #prefix>
+            <el-icon><Search /></el-icon>
+          </template>
+        </el-input>
+        <el-input
+          v-model="searchNickname"
+          placeholder="搜索昵称"
+          clearable
+          style="width: 180px"
+          @keyup.enter="handleSearch"
+          @clear="handleSearch"
+        >
+          <template #prefix>
+            <el-icon><Search /></el-icon>
+          </template>
+        </el-input>
+        <el-button type="primary" @click="handleSearch">搜索</el-button>
+        <el-button @click="resetSearch">重置</el-button>
         <el-button type="primary" @click="openDialog">新增用户</el-button>
         <el-button type="info" @click="downloadTemplate">下载导入模板</el-button>
           
@@ -91,7 +117,9 @@
 <script setup>
 import { ref, onMounted, getCurrentInstance } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Search } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
+import { rsaEncrypt } from '../utils/encrypt'
 
 const { proxy } = getCurrentInstance()
 const router = useRouter()
@@ -100,6 +128,8 @@ const dialogVisible = ref(false)
 const isEdit = ref(false)
 const failDialogVisible = ref(false)
 const failList = ref([])
+const searchUsername = ref('')
+const searchNickname = ref('')
 const form = ref({
   id: null,
   username: '',
@@ -111,8 +141,27 @@ const form = ref({
 
 // 获取列表
 const getList = async () => {
-  const res = await proxy.$http.get('/user')
+  const params = {}
+  if (searchUsername.value.trim()) {
+    params.username = searchUsername.value.trim()
+  }
+  if (searchNickname.value.trim()) {
+    params.nickname = searchNickname.value.trim()
+  }
+  const res = await proxy.$http.get('/user', { params })
   tableData.value = res.data.results
+}
+
+// 搜索
+const handleSearch = () => {
+  getList()
+}
+
+// 重置搜索
+const resetSearch = () => {
+  searchUsername.value = ''
+  searchNickname.value = ''
+  getList()
 }
 
 // 退出登录
@@ -143,10 +192,14 @@ const editRow = (row) => {
 
 // 提交
 const submitForm = async () => {
+  const data = { ...form.value }
+  if (data.password) {
+    data.password = rsaEncrypt(data.password)
+  }
   if(isEdit.value){
-    await proxy.$http.put(`/user/${form.value.id}`, form.value)
+    await proxy.$http.put(`/user/${data.id}`, data)
   }else{
-    await proxy.$http.post('/user', form.value)
+    await proxy.$http.post('/user', data)
   }
   dialogVisible.value = false
   ElMessage.success('操作成功')

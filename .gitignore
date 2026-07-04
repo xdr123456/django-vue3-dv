@@ -1,0 +1,28 @@
+# 前端
+frontend/node_modules/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# 数据库
+*.sqlite3
+
+# 向量库 & 上传文件
+langchain_rag_project/vector_db/
+langchain_rag_project/media/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# 环境变量
+.env
+
+# 系统文件
+.DS_Store
+Thumbs.db
